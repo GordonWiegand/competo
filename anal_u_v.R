@@ -76,7 +76,11 @@ table(du$bm==0) #Anzahl Einheiten ohne Briefmarkenvorrat
 print("Anzahl Einheiten")
 nrow(du) #Anzahl Einheiten
 print("Anzahl Einheiten mit gültigen BM Werten")
-table(!is.na(du$bm)) #Anzahl Einheiten mit gültigen BM Werten 
+table(!is.na(du$bm)) #Anzahl Einheiten mit gültigen BM Werten
+print("Arithm. Mittel")
+weighted.mean(du$bm,du$w,na.rm=T) #Arith. Mittel 
+print("Anteil Top 25")
+sum(sort(du$bm,decreasing=T)[1:round(.1*nrow(du),0)])/sum(du$bm,na.rm=T) #Anteil an BM der Top 10%
 
 print("Vereine")
 win(dv,tri)
@@ -89,7 +93,11 @@ table(dv$bm==0) #Anzahl Einheiten ohne Briefmarkenvorrat
 print("Anzahl Einheiten")
 nrow(dv) #Anzahl Einheiten
 print("Anzahl Einheiten mit gültigen BM Werten")
-table(!is.na(dv$bm)) #Anzahl Einheiten mit gültigen BM Werten 
+table(!is.na(dv$bm)) #Anzahl Einheiten mit gültigen BM Werten
+print("Arithm. Mittel")
+weighted.mean(dv$bm,dv$w,na.rm=T) #Arith. Mittel 
+print("Anteil Top 25")
+sum(sort(dv$bm,decreasing=T)[1:round(.1*nrow(dv),0)])/sum(dv$bm,na.rm=T) #Anteil an BM der Top 10%
 #########################################################################################################
 
 #Plots

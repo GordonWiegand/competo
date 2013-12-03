@@ -85,6 +85,10 @@ print("Anzahl Einheiten")
 nrow(dh) #Anzahl Einheiten
 print("Anzahl Einheiten mit gültigen BM Werten")
 table(!is.na(dh$bm)) #Anzahl Einheiten mit gültigen BM Werten 
+print("Arithm. Mittel")
+weighted.mean(dh$bm,dh$w,na.rm=T) #Arith. Mittel 
+print("Anteil Top 25")
+sum(sort(dh$bm,decreasing=T)[1:round(.1*nrow(dh),0)])/sum(dh$bm,na.rm=T) #Anteil an BM der Top 10%
 #########################################################################################################
 
 #Plots
