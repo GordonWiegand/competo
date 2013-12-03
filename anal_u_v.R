@@ -1,5 +1,23 @@
+#Unternehmen und Vereine
 rm(list=ls())
+#########################################################################################################
+
+#Intro
+#########################################################################################################
+#Das Workingdirectory ist anzupassen. Sonstige Parameter auch. Ausgabe des des winzorisierten Mittelwertes einschliesslich Konfidenzintervall ins working directory.
+#Parameter konstant bei beiden Teilerhebungen 
+
+#Parameter setzen
+#########################################################################################################
 setwd("/Volumes/hd2/131021_briefmarken4/")  
+tri <- .1 #Trimmbereich 10%
+tri2 <- .15 #Trimmbereich für Bootstrapping. Aus "Kosmetikgründen" etwas höher.
+runden <- 10000 #Runden beim Bootstrapping. 10000 dauert ca 5 Sekunden
+plotZens <- 300 #Abschneiden bei den Densityplots aus Lesbarkeit. Maximalwert. (alles grösser gleich Max.)
+#########################################################################################################
+
+#Daten vorbereiten
+#########################################################################################################
 library(foreign)
 d0 <- as.data.frame(read.spss("bmuv.sav"))
 d0[d0<0] <- NA
@@ -20,8 +38,11 @@ dv[1] <- as.numeric(as.matrix(dv[1]))
 dv[2] <- as.numeric(as.matrix(dv[2]))
 names(du)<-c("bm","w")
 names(dv)<-c("bm","w")
+#########################################################################################################
 
-#Define function: Compute Winsorized Mean
+#Define function:
+#########################################################################################################
+#Compute Winsorized Mean
 win<-function(dw,tr){
         nd <- nrow(dw)
 	dw<-dw[order(dw$bm),]
@@ -38,26 +59,45 @@ winMeanVar <- function(ds,r,tr){ #ds Datensatz, r Runden, tr trimbereich
         d <- ds[sample(nrow(ds),nrow(ds),replace=T),]
         out[i] <- win(d,tr)
     }
-    print((sqrt(var(out))*1.96)/win(du,tr))
+    print(sqrt(var(out))*1.96/mean(out))
 }
+#########################################################################################################
 
+#Output
+#########################################################################################################
 print("Unternehmen")
-win(du,.1)
-winMeanVar(du,10000,.15)
+win(du,tri)
+winMeanVar(du,runden,tri2)
+#zusätzliche Informationen
+print("Top 100 Einheiten")
+sort(du$bm,decreasing=T)[1:100] #Top 100 Briefmarkenwerte
+print("Anzahl Einheiten ohne Briefmarken")
+table(du$bm==0) #Anzahl Einheiten ohne Briefmarkenvorrat
+print("Anzahl Einheiten")
+nrow(du) #Anzahl Einheiten
+print("Anzahl Einheiten mit gültigen BM Werten")
+table(!is.na(du$bm)) #Anzahl Einheiten mit gültigen BM Werten 
 
 print("Vereine")
-win(dv,.1)
-winMeanVar(dv,10000,.15)
+win(dv,tri)
+winMeanVar(dv,runden,tri2)
+#zusätzliche Informationen
+print("Top 100 Einheiten")
+sort(dv$bm,decreasing=T)[1:100] #Top 100 Briefmarkenwerte
+print("Anzahl Einheiten ohne Briefmarken")
+table(dv$bm==0) #Anzahl Einheiten ohne Briefmarkenvorrat
+print("Anzahl Einheiten")
+nrow(dv) #Anzahl Einheiten
+print("Anzahl Einheiten mit gültigen BM Werten")
+table(!is.na(dv$bm)) #Anzahl Einheiten mit gültigen BM Werten 
+#########################################################################################################
 
 #Plots
-#############################################################
-
+#########################################################################################################
 library(ggplot2)
-
-
 #Unternehmen
 dPlot <- du[!is.na(du$bm),] #NAs raus
-dPlot$bm[dPlot$bm>300] <- 300 #bei 300 abschneiden wg Lesbarkeit
+dPlot$bm[dPlot$bm>plotZens] <- plotZens #bei plotZens abschneiden wg Lesbarkeit
 jpeg("u_dens.jpg",quality=100)
     ggplot(dPlot, aes(x=bm)) + 
         geom_histogram(aes(y=..density..),
@@ -71,7 +111,7 @@ dev.off()
 
 #Vereine
 dPlot <- dv[!is.na(dv$bm),] #NAs raus
-dPlot$bm[dPlot$bm>300] <- 300 #bei 300 abschneiden wg Lesbarkeit
+dPlot$bm[dPlot$bm>plotZens] <- plotZens #bei plotZens abschneiden wg Lesbarkeit
 jpeg("v_dens.jpg",quality=100)
     ggplot(dPlot, aes(x=bm)) + 
         geom_histogram(aes(y=..density..),
@@ -82,3 +122,4 @@ jpeg("v_dens.jpg",quality=100)
         theme(axis.text.y=element_blank()) +
         geom_density(alpha=.2, fill="yellow") #alpha ist "Durchsichtigkeit"
 dev.off()
+#########################################################################################################

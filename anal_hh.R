@@ -1,15 +1,29 @@
+#Haushalte
 rm(list=ls())
+#########################################################################################################
+
+#Intro
+#########################################################################################################
+#Das Workingdirectory ist anzupassen. Sonstige Parameter auch. Ausgabe des des winzorisierten Mittelwertes einschliesslich Konfidenzintervall ins working directory.
+#########################################################################################################
+
+#Parameter definieren
+#########################################################################################################
+setwd("/Volumes/hd2/131021_briefmarken4/")  
+tri <- .1 #Trimmbereich 10%
+tri2 <- .15 #Trimmbereich für Bootstrapping. Aus "Kosmetikgründen" etwas höher.
+runden <- 10000
+plotZens <- 300 #Abschneiden bei den Densityplots aus Lesbarkeit. Maximalwert. (alles grösser gleich Max.)
+#########################################################################################################
+
+#Daten vorbereiten
+#########################################################################################################
 library(foreign)
-d0 <- as.data.frame(read.spss("/Volumes/hd2/130100_competo2/Competo_2013_mitSprachversion.sav"))
-d0[d0<0] <- NA
-#cleaning up
-raus <- c(24,55,161,351,362,373:378,390,491,528,831,982)
-for (i in 1:length(raus)) d0 <- d0[d0$FB_Nr != raus[i],]
-####################################
-##Raking                          ##
-####################################
-#Aim: sum F4a,F4b, Problem: NA, 1st step flag NA's
-d0$f <- logical(nrow(d0))
+d0 <- as.data.frame(read.spss("bmhh.sav"))
+d0[d0<0] <- NA  #NAs kodiert als -99 -99.99 -90 als NA
+
+#Raking. Randsummen vom BFS
+d0$f <- logical(nrow(d0)) #Aim: sum F4a,F4b, Problem: NA, 1st step flag NA's
 d0$f[is.na(d0$Frage_4a)] <- T
 d0$f <- !d0$f
 d0$Frage_4a[is.na(d0$Frage_4a)] <- 0
@@ -29,10 +43,13 @@ for (i in 1:length(listHH)) {
           (listRE[j] * listHH[i] * nrow(d0))/
            sum(d0$Frage_4==i & d0$Sprache==j)
   }
+dh <- as.data.frame(cbind(d0$Frage_2,d0$w)) #Als Arbeitsdatensatz nur noch Gewichte und Briefmarken
+colnames(dh) <- c("bm","w")
+#########################################################################################################
 
-####################################
-#Define function: Compute Winsorized Mean
-####################################
+#Define function
+#########################################################################################################
+#Compute Winsorized Mean
 win<-function(dw,tr){
         nd <- nrow(dw)
 	dw<-dw[order(dw$bm),]
@@ -41,41 +58,50 @@ win<-function(dw,tr){
 	dw$bm[nd:(nd-l)]<-dw$bm[(nd-l)]
 	weighted.mean(dw$bm,dw$w)
 }
-dh <- as.data.frame(cbind(d0$Frage_2,d0$w))
-colnames(dh) <- c("bm","w")
-#That's the line
-win(dh,.1)
 
-####################################
-#get the Plots: all
-library(ggplot2)
-pdf(file="/Volumes/hd2/130100_competo2/density_h_alle.pdf")
-ggplot(dh, aes(x=bm)) + geom_density() + xlab("Briefmarken in CHF")
-dev.off()
-#get the Plots:loup 
-dh500 <- dh[dh$bm<500,]
-pdf(file="/Volumes/hd2/130100_competo2/density_h_500.pdf")
-ggplot(dh500, aes(x=bm)) + geom_density() + xlab("Briefmarken in CHF")
-dev.off()
-
-###########################################
-#Bootstrap Confidence Intervalls
-###########################################
-#Companies
-d <- dh
-outci <- double(10000)
-nrd <- nrow(d)
-#Heyho, simulate!
-for (i in 1:10000){
-	ds<-d[sample(nrd,size=nrd,replace=T),]
-	names(ds) <- c("bm","w")
-	outci[i]<-win(ds,.15)
+#Confidence Intervalls
+winMeanVar <- function(ds,r,tr){ #ds Datensatz, r Runden, tr trimbereich
+    out <- numeric(r)
+    for (i in 1:r){
+        dwin <- ds[sample(nrow(ds),nrow(ds),replace=T),]
+        out[i] <- win(dwin,tr)
+    }
+    print(sqrt(var(out))*1.96/mean(out))
 }
-#Produce Output
-outi <- double(4)
-names(outi) <- c("mean","msig","psig","p" )
-outi[1] <- mean(outci)
-outi[2] <- mean(outci)-1.96*sqrt(var(outci))
-outi[3] <- mean(outci)+1.96*sqrt(var(outci))
-outi[4] <- ((outi[1]-outi[2])*100)/outi[1]
-outi
+#########################################################################################################
+
+#Output
+#########################################################################################################
+print("Win Mean")
+win(dh,tri)
+print("Konfidenzintervall")
+winMeanVar(dh,runden,tri2)
+#zusätzliche Informationen
+print("Top 100 Einheiten")
+sort(dh$bm,decreasing=T)[1:100] #Top 100 Briefmarkenwerte
+print("Anzahl Einheiten ohne Briefmarken")
+table(dh$bm==0) #Anzahl Einheiten ohne Briefmarkenvorrat
+print("Anzahl Einheiten")
+nrow(dh) #Anzahl Einheiten
+print("Anzahl Einheiten mit gültigen BM Werten")
+table(!is.na(dh$bm)) #Anzahl Einheiten mit gültigen BM Werten 
+#########################################################################################################
+
+#Plots
+#########################################################################################################
+library(ggplot2)
+#Haushalte
+dPlot <- dh[!is.na(dh$bm),] #NAs raus
+dPlot$bm[dPlot$bm>plotZens] <- plotZens #bei plotZens abschneiden wg Lesbarkeit
+jpeg("h_dens.jpg",quality=100)
+    ggplot(dPlot, aes(x=bm)) + 
+        geom_histogram(aes(y=..density..),
+                       binwidth=20,                 # Bins bei 20 Franken
+                       colour="black", fill="white") +
+        xlab("Briefmarken in CHF") +
+        ylab("Dichte") +
+        theme(axis.text.y=element_blank()) +
+        geom_density(alpha=.2, fill="yellow") #alpha ist "Durchsichtigkeit"
+dev.off()
+#########################################################################################################
+
